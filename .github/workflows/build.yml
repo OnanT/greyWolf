@@ -1,0 +1,34 @@
+name: Build, Test, and Schedule
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * *'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker Image
+        run: docker build -t ghcr.io/OnanT/greyWolf:latest .
+      - name: Test Hunt Script
+        run: docker run ghcr.io/OnanT/greyWolf:latest grey-wolf-wrapper.sh -hunt test.com -s
+      - name: Push to GHCR
+        run: |
+          docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+          docker push ghcr.io/OnanT/greyWolf:latest
+  recon:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Scheduled Recon
+        run: |
+          docker pull ghcr.io/OnanT/greyWolf:latest
+          docker run -v ./output:/app/output ghcr.io/OnanT/greyWolf:latest grey-wolf-wrapper.sh -hunt example.com -a
+      - name: Commit Results
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add output/
+          git commit -m "Scheduled recon results" || echo "No changes"
+          git push
