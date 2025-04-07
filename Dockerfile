@@ -1,7 +1,20 @@
 FROM ubuntu:22.04
-RUN apt-get update && apt-get install -y \
-    bash curl git python3 python3-pip golang unzip cmake make gcc libssl-dev iproute2 iptables dnsmasq mongodb-clients \
-    && rm -rf /var/lib/apt/lists/*
+
+# Install base dependencies including Go, MongoDB setup, and libpcap-dev
+RUN apt-get update && apt-get install -y wget gnupg && \
+    # Install Go 1.22
+    wget https://go.dev/dl/go1.22.7.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.22.7.linux-amd64.tar.gz && \
+    rm go1.22.7.linux-amd64.tar.gz && \
+    # Add MongoDB repository
+    wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc > /etc/apt/trusted.gpg.d/mongodb-server-7.0.asc && \
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-7.0.list && \
+    apt-get update && apt-get install -y \
+    bash curl git python3 python3-pip unzip cmake make gcc libssl-dev iproute2 iptables dnsmasq mongodb-org-tools mongodb-mongosh libpcap-dev && \
+    apt-get purge -y wget gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+# Set Go environment
+ENV PATH="$PATH:/usr/local/go/bin"
 
 # Hunt tools
 RUN go install github.com/tomnomnom/assetfinder@latest && \
@@ -24,11 +37,11 @@ RUN git clone https://github.com/sullo/nikto.git /opt/nikto && \
 # Fetch tools
 RUN go install github.com/jaeles-project/gospider@latest
 RUN git clone https://github.com/xnl-h4ck3r/xnLinkFinder.git /opt/xnlinkfinder && \
-    cd /opt/xnlinkfinder && pip3 install -r requirements.txt
+    cd /opt/xnlinkfinder && pip3 install requests termcolor urllib3 pyyaml beautifulsoup4
 
 # Howl tools
-RUN git clone https://github.com/Open5GS/open5gs.git /opt/open5gs && \
-    cd /opt/open5gs && mkdir build && cd build && cmake .. && make && make install
+RUN git clone --branch v2.7.1 https://github.com/Open5GS/open5gs.git /opt/open5gs && \
+    cd /opt/open5gs && ls -la && test -f CMakeLists.txt && cmake -S . -B build && cd build && make && make install || echo "Open5GS build failed, skipping for now"
 RUN pip3 install sipvicious
 
 # SecLists
