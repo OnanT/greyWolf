@@ -2,11 +2,9 @@ FROM ubuntu:22.04
 
 # Install base dependencies including Go, MongoDB setup, and libpcap-dev
 RUN apt-get update && apt-get install -y wget gnupg && \
-    # Install Go 1.22
     wget https://go.dev/dl/go1.22.7.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.22.7.linux-amd64.tar.gz && \
     rm go1.22.7.linux-amd64.tar.gz && \
-    # Add MongoDB repository
     wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc > /etc/apt/trusted.gpg.d/mongodb-server-7.0.asc && \
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-7.0.list && \
     apt-get update && apt-get install -y \
@@ -14,7 +12,7 @@ RUN apt-get update && apt-get install -y wget gnupg && \
     apt-get purge -y wget gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 # Set Go environment
-ENV PATH="$PATH:/usr/local/go/bin"
+ENV PATH="$PATH:/usr/local/go/bin:/root/go/bin:/app"
 
 # Hunt tools
 RUN go install github.com/tomnomnom/assetfinder@latest && \
@@ -25,7 +23,8 @@ RUN go install github.com/tomnomnom/assetfinder@latest && \
     go install github.com/lc/gau/v2/cmd/gau@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install github.com/ffuf/ffuf/v2@latest && \
-    go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+    go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
+    ls -l /root/go/bin/  # Debug: confirm binaries are there
 
 RUN git clone https://github.com/m4ll0k/LinkFinder.git /opt/linkfinder && \
     cd /opt/linkfinder && pip3 install -r requirements.txt && \
@@ -50,7 +49,7 @@ COPY wordlists/api-endpoints-short.txt /app/wordlists/SecLists/Discovery/Web-Con
 
 WORKDIR /app
 COPY *.sh .
-RUN chmod +x *.sh
-ENV PATH="$PATH:/root/go/bin:/usr/local/bin"
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./grey-wolf-wrapper.sh"]
+RUN chmod +x *.sh && ls -l /app/  # Debug: confirm scripts are there
+ENTRYPOINT ["/app/grey-wolf-wrapper.sh"]
+CMD ["-hunt", "example.com", "-s"]
+
