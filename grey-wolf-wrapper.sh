@@ -1,20 +1,30 @@
 #!/bin/bash
-# "🔥🔥🐾🐾🐾🐾🐾🔥🔥"
+# "🔥🔥🐾🐾🐾🐾🐾🐾🐾🐾🔥🔥"
 # "🐺 GREY WOLF WRAPPER 🐺"
 
-if [ $# -lt 2 ] || [[ "$1" != -* ]]; then
-    echo "Usage: greyWolf -[hunt|fetch|howl] <target> [flags]"
-    echo "Example: greyWolf -fetch onant.com -s -j -v"
-    exit 1
-fi
-
-MODE="$1"
-TARGET="$2"
-shift 2
-
-case "$MODE" in
-    -hunt) ./grey-wolf-hunt.sh "$TARGET" "$@" ;;
-    -fetch) ./grey-wolf-fetch.sh "$TARGET" "$@" ;;
-    -howl) ./grey-wolf-howl.sh "$TARGET" "$@" ;;
-    *) echo "Unknown mode: $MODE. Use -hunt, -fetch, or -howl."; exit 1 ;;
-esac
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -hunt)
+            shift
+            TARGET="$1"
+            shift
+            source /app/grey-wolf-hunt.sh "$TARGET" "$@"
+            exit 0
+            ;;
+        -wolf-pack-attack)
+            shift
+            TARGET="$1"
+            shift
+            source /app/wolf-pack-attack.sh "$TARGET" "$@"
+            exit 0
+            ;;
+        -fetch|-howl)
+            echo "Mode $1 not fully implemented yet"
+            exit 0
+            ;;
+        *)
+            echo "Usage: greyWolf -[hunt|wolf-pack-attack|fetch|howl] <target> [flags]"
+            exit 1
+            ;;
+    esac
+done

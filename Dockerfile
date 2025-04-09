@@ -11,10 +11,8 @@ RUN apt-get update && apt-get install -y wget gnupg && \
     bash curl git python3 python3-pip unzip cmake make gcc libssl-dev iproute2 iptables dnsmasq mongodb-org-tools mongodb-mongosh libpcap-dev && \
     apt-get purge -y wget gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
-# Set Go environment
 ENV PATH="$PATH:/usr/local/go/bin:/root/go/bin:/app"
 
-# Hunt tools
 RUN go install github.com/tomnomnom/assetfinder@latest && \
     go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
     go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest && \
@@ -24,7 +22,7 @@ RUN go install github.com/tomnomnom/assetfinder@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install github.com/ffuf/ffuf/v2@latest && \
     go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
-    ls -l /root/go/bin/  # Debug: confirm binaries are there
+    ls -l /root/go/bin/
 
 RUN git clone https://github.com/m4ll0k/LinkFinder.git /opt/linkfinder && \
     cd /opt/linkfinder && pip3 install -r requirements.txt && \
@@ -33,23 +31,19 @@ RUN git clone https://github.com/m4ll0k/LinkFinder.git /opt/linkfinder && \
 RUN git clone https://github.com/sullo/nikto.git /opt/nikto && \
     ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto
 
-# Fetch tools
 RUN go install github.com/jaeles-project/gospider@latest
 RUN git clone https://github.com/xnl-h4ck3r/xnLinkFinder.git /opt/xnlinkfinder && \
     cd /opt/xnlinkfinder && pip3 install requests termcolor urllib3 pyyaml beautifulsoup4
 
-# Howl tools
 RUN git clone --branch v2.7.1 https://github.com/Open5GS/open5gs.git /opt/open5gs && \
     cd /opt/open5gs && ls -la && test -f CMakeLists.txt && cmake -S . -B build && cd build && make && make install || echo "Open5GS build failed, skipping for now"
 RUN pip3 install sipvicious
 
-# SecLists
 RUN git clone https://github.com/danielmiessler/SecLists.git /app/wordlists/SecLists
 COPY wordlists/api-endpoints-short.txt /app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints-short.txt
 
 WORKDIR /app
 COPY *.sh .
-RUN chmod +x *.sh && ls -l /app/  # Debug: confirm scripts are there
+RUN chmod +x *.sh && ls -l /app/
 ENTRYPOINT ["/app/grey-wolf-wrapper.sh"]
 CMD ["-hunt", "example.com", "-s"]
-
