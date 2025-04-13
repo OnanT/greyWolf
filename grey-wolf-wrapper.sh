@@ -18,7 +18,14 @@ while [[ $# -gt 0 ]]; do
             source /app/wolf-pack-attack.sh "$TARGET" "$@"
             exit 0
             ;;
-        -fetch|-howl)
+        -fetch)
+            shift
+            TARGET="$1"
+            shift
+            source /app/grey-wolf-fetch.sh "$TARGET" "$@"
+            exit 0
+            ;;
+        -howl)
             echo "Mode $1 not fully implemented yet"
             exit 0
             ;;

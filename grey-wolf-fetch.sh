@@ -1,77 +1,136 @@
 #!/bin/bash
-# Banner
-echo -e "\e[1;34m"
-echo "🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🔥🔥"
-echo "================================================================"
-echo "             🐺 GREY WOLF FETCH 🐺"
-echo "================================================================"
-echo "        // 🌙 The Silent Hunters 🌙 //"
-echo -e "\e[0m"
-# API-specific recon
+echo "Running fetch script..."  # Debug
+TARGET="$1"
+shift
+WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints-short.txt"  # API-focused default
+RUN_SUBDOMAINS="n"
+RUN_LIVE="n"
+RUN_URLS="n"
+RUN_JS="n"
+RUN_CONTENT="n"
+RUN_VULNS="n"
 
-Usage() {
-  echo "Usage: $0 <target> [-s] [-u] [-j] [-f] [-v] [-a|-all] [-w small|medium|large]"
-  exit 1
-}
-
-RUN_S=0 RUN_U=0 RUN_J=0 RUN_F=0 RUN_V=0 RUN_ALL=0 WL_LEVEL=""
-[ $# -eq 0 ] && Usage
-while getopts ":sujfv-:w:" opt; do
-  case "$opt" in
-    s) RUN_S=1 ;;
-    u) RUN_U=1 ;;
-    j) RUN_J=1 ;;
-    f) RUN_F=1 ;;
-    v) RUN_V=1 ;;
-    -) [ "$OPTARG" = "all" ] || [ "$OPTARG" = "a" ] && RUN_ALL=1 || { echo "Unknown option --$OPTARG"; Usage; } ;;
-    w) WL_LEVEL="$OPTARG"; [ "$WL_LEVEL" != "small" ] && [ "$WL_LEVEL" != "medium" ] && [ "$WL_LEVEL" != "large" ] && { echo "Invalid -w: small, medium, large"; Usage; } ;;
-    \?) echo "Invalid option: -$OPTARG"; Usage ;;
-  esac
-done
-shift $((OPTIND - 1))
-
-[ -z "$1" ] && { read -p "Enter target domain: " TARGET; } || TARGET="$1"
-OUTDIR="/app/output/$TARGET"
-mkdir -p "$OUTDIR"
-
-[ $RUN_S -eq 0 ] && [ $RUN_U -eq 0 ] && [ $RUN_J -eq 0 ] && [ $RUN_F -eq 0 ] && [ $RUN_V -eq 0 ] && [ $RUN_ALL -eq 0 ] && { RUN_S=1; RUN_U=1; RUN_F=1; }
-[ $RUN_ALL -eq 1 ] && { RUN_S=1; RUN_U=1; RUN_J=1; RUN_F=1; RUN_V=1; }
-
-set_wordlist() {
-  if [ -n "$WL_LEVEL" ]; then
-    case "$WL_LEVEL" in
-      small)  WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints-short.txt" ;;
-      medium) WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints.txt" ;;
-      large)  WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/raft-large-files.txt" ;;
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -s)
+            RUN_SUBDOMAINS="y"
+            shift
+            ;;
+        -l)
+            RUN_LIVE="y"
+            shift
+            ;;
+        -u)
+            RUN_URLS="y"
+            shift
+            ;;
+        -j)
+            RUN_JS="y"
+            shift
+            ;;
+        -c)
+            RUN_CONTENT="y"
+            shift
+            ;;
+        -v)
+            RUN_VULNS="y"
+            shift
+            ;;
+        -all)
+            RUN_SUBDOMAINS="y"
+            RUN_LIVE="y"
+            RUN_URLS="y"
+            RUN_JS="y"
+            RUN_CONTENT="y"
+            RUN_VULNS="y"
+            shift
+            ;;
+        -w)
+            shift
+            case $1 in
+                small)
+                    WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints-short.txt"
+                    ;;
+                medium)
+                    WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/api-endpoints.txt"
+                    ;;
+                large)
+                    WORDLIST="/app/wordlists/SecLists/Discovery/Web-Content/raft-large-words.txt"
+                    ;;
+                *)
+                    echo "Invalid wordlist level: $1 (use small|medium|large)"
+                    exit 1
+                    ;;
+            esac
+            shift
+            ;;
+        *)
+            shift
+            ;;
     esac
-    echo "[*] Using wordlist: $WORDLIST (level: $WL_LEVEL)"
-  else
-    DEFAULT_WL="/app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints-short.txt"
-    echo "No wordlist level specified (-w small|medium|large)."
-    read -p "Use default ($DEFAULT_WL)? [y/N]: " choice
-    if [ "$choice" = "y" ] || [ "$choice" = "Y" ]; then
-      WORDLIST="$DEFAULT_WL"
-      echo "[*] Using default wordlist: $WORDLIST"
+done
+
+echo "🔥🔥🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🐾🔥🔥"
+echo "================================================================"
+echo "          🐺 GREY WOLF FETCH 🐺"
+echo "================================================================"
+echo "        // 🌙 API Hunters Unleashed 🌙 //"
+echo
+
+mkdir -p /app/output/$TARGET
+
+if [ "$RUN_SUBDOMAINS" = "y" ]; then
+    echo "[*] Subdomain Enumeration..."
+    assetfinder --subs-only $TARGET > /app/output/$TARGET/subdomains.txt
+    subfinder -d $TARGET -o /app/output/$TARGET/subdomains_subfinder.txt
+    cat /app/output/$TARGET/subdomains_subfinder.txt | /root/go/bin/anew /app/output/$TARGET/subdomains.txt
+fi
+
+if [ "$RUN_LIVE" = "y" ]; then
+    echo "[*] Live Check..."
+    if [ -s /app/output/$TARGET/subdomains.txt ]; then
+        naabu -l /app/output/$TARGET/subdomains.txt -o /app/output/$TARGET/ports.txt
+        httpx -l /app/output/$TARGET/subdomains.txt -tech-detect -o /app/output/$TARGET/live_subdomains.txt
     else
-      read -p "Enter custom wordlist path: " WL
-      [ -f "$WL" ] || { echo "Wordlist not found at $WL!"; exit 1; }
-      WORDLIST="$WL"
-      echo "[*] Using custom wordlist: $WORDLIST"
+        echo "No subdomains found, skipping live check..."
     fi
-  fi
-}
+fi
 
-subdomain_enum() { echo "[*] Subdomain Enumeration..."; subfinder -d "$TARGET" -silent > "$OUTDIR/subdomains.txt" & }
-api_url_gather() { echo "[*] Gathering API URLs..."; gospider -s "https://$TARGET" | grep -i "api" > "$OUTDIR/api_urls.txt" & }
-js_api_recon() { [ ! -f "$OUTDIR/api_urls.txt" ] && { echo "[-] Run -u first!"; return; }; echo "[*] JS API Recon..."; grep "\.js" "$OUTDIR/api_urls.txt" | while read -r js_url; do python3 /opt/xnlinkfinder/xnLinkFinder.py -i "$js_url" -o "$OUTDIR/api_js_findings_$(basename "$js_url").txt" & done; wait; cat "$OUTDIR/api_js_findings_"*.txt > "$OUTDIR/api_js_findings.txt" 2>/dev/null; }
-api_fuzzing() { set_wordlist; echo "[*] Fuzzing API endpoints..."; ffuf -w "$WORDLIST" -u "https://$TARGET/api/FUZZ" -mc 200,201,403 -H "Accept: application/json" -o "$OUTDIR/api_fuzz.json" & }
-vuln_scanning() { [ ! -f "$OUTDIR/subdomains.txt" ] && { echo "[-] Run -s first!"; return; }; echo "[*] Scanning API vulns..."; nuclei -l "$OUTDIR/subdomains.txt" -t api/ -o "$OUTDIR/api_vulns.txt" & }
+if [ "$RUN_URLS" = "y" ]; then
+    echo "[*] URL Crawling..."
+    gau $TARGET > /app/output/$TARGET/gau_urls.txt
+    katana -u "https://$TARGET" -o /app/output/$TARGET/katana_urls.txt
+    cat /app/output/$TARGET/gau_urls.txt /app/output/$TARGET/katana_urls.txt | /root/go/bin/anew /app/output/$TARGET/urls.txt
+fi
 
-[ $RUN_S -eq 1 ] && subdomain_enum
-[ $RUN_U -eq 1 ] && api_url_gather
-[ $RUN_J -eq 1 ] && [ $RUN_U -eq 1 ] && wait && js_api_recon
-[ $RUN_F -eq 1 ] && api_fuzzing
-[ $RUN_V -eq 1 ] && [ $RUN_S -eq 1 ] && wait && vuln_scanning
+if [ "$RUN_JS" = "y" ]; then
+    echo "[*] JS Recon..."
+    if [ -s /app/output/$TARGET/live_subdomains.txt ]; then
+        linkfinder -i "https://$TARGET" -o /app/output/$TARGET/linkfinder_results.html
+        python3 /opt/xnlinkfinder/xnlinkfinder.py -i "https://$TARGET" -o /app/output/$TARGET/xnlinkfinder_results.html
+    else
+        echo "No live subdomains, skipping JS recon..."
+    fi
+fi
 
-wait
-echo "[*] Done! Results in $OUTDIR"
+if [ "$RUN_CONTENT" = "y" ]; then
+    echo "[*] Using wordlist: $WORDLIST"
+    echo "[*] Content Discovery..."
+    if [ -s /app/output/$TARGET/live_subdomains.txt ]; then
+        ffuf -u "http://FUZZ.$TARGET/" -w "$WORDLIST" -o /app/output/$TARGET/content.json
+    else
+        echo "No live subdomains, skipping content discovery..."
+    fi
+fi
+
+if [ "$RUN_VULNS" = "y" ]; then
+    echo "[*] Vulnerability Scanning..."
+    if [ -s /app/output/$TARGET/live_subdomains.txt ]; then
+        nuclei -l /app/output/$TARGET/live_subdomains.txt -t api/ -o /app/output/$TARGET/vuln_results.txt
+    else
+        echo "No live subdomains, skipping vuln scanning..."
+    fi
+fi
+
+echo "[*] Done! Results in /app/output/$TARGET"
+ls -l /app/output/$TARGET/
