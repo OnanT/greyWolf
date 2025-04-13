@@ -43,7 +43,7 @@ RUN git clone https://github.com/danielmiessler/SecLists.git /app/wordlists/SecL
 COPY wordlists/api-endpoints-short.txt /app/wordlists/SecLists/Discovery/Web-Content/api/api-endpoints-short.txt
 
 WORKDIR /app
-COPY *.sh .
+COPY *.sh ./
 RUN chmod +x *.sh && ls -l /app/
 ENTRYPOINT ["/app/grey-wolf-wrapper.sh"]
 CMD ["-hunt", "example.com", "-s"]
